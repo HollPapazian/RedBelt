@@ -8,6 +8,8 @@
 #include <set>
 using namespace std;
 
+// тест
+
 template <class T>
 class ObjectPool {
 public:
