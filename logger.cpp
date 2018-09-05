@@ -8,88 +8,41 @@
 #include <set>
 using namespace std;
 
-// тест
-
-template <class T>
-class ObjectPool {
+template <typename T>
+class SimpleVector {
 public:
-  T* Allocate() {
-		if (free.size() != 0) {
-			return Switch();
-		} else {
-			return *((in_use.insert(new T)).first);
-		}
-		//cerr << in_use.size() << endl;
-		//return *(in_use.begin());
-  };
-  T* TryAllocate() {
-		if (free.size() != 0) {
-			return Switch();
-		} else {
-			return nullptr;
-		}
-  };
-
-  void Deallocate(T* object) {
-	 auto it = in_use.find(object);
-	 //cerr << *object << " " << *(*it) << endl;
-	 if (it == in_use.end())
-		 throw invalid_argument("Invalid argument");
-	 else {
-	 free.push(*it);
-	 in_use.erase(it);
-	 }
-
-  };
-
-  void PrintTest (){
-	  for (auto a : in_use)
-		  cerr << *a << endl;
-  }
-
-  ~ObjectPool() {
-	 for (auto it : in_use)
-		 delete it;
-	while (free.size() != 0) {
-		delete free.front();
-		free.pop();
+	SimpleVector (size_t size_) {
+		data = new T[size_];
+		size = size_;
 	}
-  };
+	T& operator[] (size_t index) {
+		return data[index];
+	}
 
+	const T* begin() const {return data;}
+	const T* end() const {return &(data[size]);}
+	T* begin() {return data;}
+	T* end() {return &(data[size]);}
+	~SimpleVector(){
+		delete[] data;
+	}
 private:
-  set<T*> in_use;
-  queue<T*> free;
-  T* Switch () {
-  auto it = in_use.insert(free.front());
-  free.pop();
-  return *(it.first);
-  };
+	T* data;
+	size_t size;
 };
 
-void TestObjectPool() {
-  ObjectPool<string> pool;
+template <typename T>
+void Print (const SimpleVector<T>& vect) {
+	for (const auto& x : vect)
+		cout << x << " ";
 
-  auto p1 = pool.Allocate();
-  auto p2 = pool.Allocate();
-  auto p3 = pool.Allocate();
-
-  *p1 = "first";
-  *p2 = "second";
-  *p3 = "third";
-
-  pool.Deallocate(p2);
-  ASSERT_EQUAL(*pool.Allocate(), "second");
-
-  pool.Deallocate(p3);
-  pool.Deallocate(p1);
-  ASSERT_EQUAL(*pool.Allocate(), "third");
-  ASSERT_EQUAL(*pool.Allocate(), "first");
-
-  pool.Deallocate(p1);
 }
 
 int main() {
-  TestRunner tr;
-  RUN_TEST(tr, TestObjectPool);
-  return 0;
+
+	SimpleVector<int> vectorr(5);
+	vectorr[1] = 1;
+	*vectorr.begin() = 2;
+	Print(vectorr);
+
 }
