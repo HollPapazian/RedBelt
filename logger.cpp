@@ -1,48 +1,94 @@
 #include "test_runner.h"
 
 #include <algorithm>
-#include <iostream>
-#include <string>
-#include <queue>
-#include <stdexcept>
-#include <set>
+#include <numeric>
 using namespace std;
 
 template <typename T>
-class SimpleVector {
-public:
-	SimpleVector (size_t size_) {
-		data = new T[size_];
-		size = size_;
-	}
-	T& operator[] (size_t index) {
-		return data[index];
-	}
-
-	const T* begin() const {return data;}
-	const T* end() const {return &(data[size]);}
-	T* begin() {return data;}
-	T* end() {return &(data[size]);}
-	~SimpleVector(){
-		delete[] data;
-	}
-private:
-	T* data;
-	size_t size;
+void Swap(T* first, T* second) {
+	T temp_ptr = *first;
+	*first = *second;
+	*second = temp_ptr;
 };
 
 template <typename T>
-void Print (const SimpleVector<T>& vect) {
-	for (const auto& x : vect)
-		cout << x << " ";
+void SortPointers(vector<T*>& pointers) {
+	sort(pointers.begin(), pointers.end(),[](T* lhr, T* rhr) {return *lhr < *rhr;});
+};
 
+template <typename T>
+void ReversedCopy(T* source, size_t count, T* destination)
+{
+	T* temp_ptr = new T[count];
+	for (size_t i = 0; i < count; ++i){
+		//cerr << "i = " << i << " count = " << count << endl;
+		temp_ptr[i] = source[count - 1 - i];
+	}
+	for (size_t i = 0; i < count; ++i){
+		//cerr << "i = " << i << " count = " << count << endl;
+		destination[i] = temp_ptr[i];
+	}
+
+};
+
+void TestSwap() {
+  int a = 1;
+  int b = 2;
+  Swap(&a, &b);
+  ASSERT_EQUAL(a, 2);
+  ASSERT_EQUAL(b, 1);
+
+  string h = "world";
+  string w = "hello";
+  Swap(&h, &w);
+  ASSERT_EQUAL(h, "hello");
+  ASSERT_EQUAL(w, "world");
+}
+
+void TestSortPointers() {
+  int one = 1;
+  int two = 2;
+  int three = 3;
+
+  vector<int*> pointers;
+  pointers.push_back(&two);
+  pointers.push_back(&three);
+  pointers.push_back(&one);
+
+  SortPointers(pointers);
+
+  ASSERT_EQUAL(pointers.size(), 3u);
+  ASSERT_EQUAL(*pointers[0], 1);
+  ASSERT_EQUAL(*pointers[1], 2);
+  ASSERT_EQUAL(*pointers[2], 3);
+}
+
+void TestReverseCopy() {
+  const size_t count = 7;
+
+  int* source = new int[count];
+  int* dest = new int[count];
+
+  for (size_t i = 0; i < count; ++i) {
+    source[i] = i + 1;
+  }
+  ReversedCopy(source, count, dest);
+  const vector<int> expected1 = {7, 6, 5, 4, 3, 2, 1};
+  ASSERT_EQUAL(vector<int>(dest, dest + count), expected1);
+
+  // Области памяти могут перекрываться
+  ReversedCopy(source, count - 1, source + 1);
+  const vector<int> expected2 = {1, 6, 5, 4, 3, 2, 1};
+  ASSERT_EQUAL(vector<int>(source, source + count), expected2);
+
+  delete[] dest;
+  delete[] source;
 }
 
 int main() {
-
-	SimpleVector<int> vectorr(5);
-	vectorr[1] = 1;
-	*vectorr.begin() = 2;
-	Print(vectorr);
-
+  TestRunner tr;
+  RUN_TEST(tr, TestSwap);
+  RUN_TEST(tr, TestSortPointers);
+  RUN_TEST(tr, TestReverseCopy);
+  return 0;
 }
