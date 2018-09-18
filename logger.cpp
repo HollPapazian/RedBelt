@@ -23,50 +23,42 @@ public:
   {
 	  //cerr << "конструктор" << endl;
 	  for (uint32_t i = 0; i <static_cast<uint32_t>(TAirport::Last_); ++i ) {
-	 		  data[static_cast<TAirport>(i)];
+	 		  data[i] = make_pair(static_cast<TAirport>(i), 0);
 	 	  }
 	  for (auto i = begin; i != end; ++i) {
-		  data[*i]++;
+		  data[static_cast<uint32_t>(*i)].second++;
 		  //cerr << static_cast<size_t>(*i) << endl;
 	  }
   };
 
   // получить количество элементов, равных данному
   size_t Get(TAirport airport) const {
-	  try {
-	  return data.at(airport);
-	  } catch (...) {
-		  //cerr << "catch" << endl;
-		  return 0;
-	  }
+	 return data[static_cast<uint32_t>(airport)].second;
   };
 
   // добавить данный элемент
   void Insert(TAirport airport) {
-	  data[airport]++;
+	  data[static_cast<uint32_t>(airport)].second++;
   };
 
   // удалить одно вхождение данного элемента
   void EraseOne(TAirport airport){
-	  data[airport]--;
+	  data[static_cast<uint32_t>(airport)].second--;
   };
 
   // удалить все вхождени€ данного элемента
   void EraseAll(TAirport airport){
-	  data[airport] = 0;
+	  data[static_cast<uint32_t>(airport)].second = 0;
   };
 
   using Item = pair<TAirport, size_t>;
-  using Items = vector<Item>;
+  using Items = array<Item, static_cast<uint32_t>(TAirport::Last_)>;
 
   // получить некоторый объект, по которому можно проитерироватьс€,
   // получив набор объектов типа Item - пар (аэропорт, количество),
   // упор€доченных по аэропорту
   Items GetItems() const {
-	  Items vect;
-	  for (auto a : data)
-		  vect.push_back(a);
-	  return vect;
+	 return data;
   };
 
   void PrintData (){
@@ -76,7 +68,7 @@ public:
   };
 
 private:
-  map<TAirport, size_t> data;
+  array<pair<TAirport, size_t>, static_cast<uint32_t>(TAirport::Last_)>  data;
 };
 
 void TestMoscow() {
@@ -245,9 +237,9 @@ int main() {
   //  роме того, не забудьте включить оптимизации при компил€ции кода.
 
   LOG_DURATION("Total tests duration");
-  //RUN_TEST(tr, TestMoscow);
-  //RUN_TEST(tr, TestManyConstructions);
-  //RUN_TEST(tr, TestManyGetItems);
+  RUN_TEST(tr, TestMoscow);
+  RUN_TEST(tr, TestManyConstructions);
+  RUN_TEST(tr, TestManyGetItems);
   RUN_TEST(tr, TestMostPopularAirport);
   return 0;
 }
