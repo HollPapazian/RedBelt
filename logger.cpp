@@ -22,33 +22,34 @@ public:
   AirportCounter(TIterator begin, TIterator end)
   {
 	  //cerr << "конструктор" << endl;
-	  for (uint32_t i = 0; i <static_cast<uint32_t>(TAirport::Last_); ++i ) {
-	 		  data[i] = make_pair(static_cast<TAirport>(i), 0);
-	 	  }
+//	  for (uint32_t i = 0; i <static_cast<uint32_t>(TAirport::Last_); ++i ) {
+//	 		  data[i] = make_pair(static_cast<TAirport>(i), 0);
+//	 	  }
+	  data.fill(0);
 	  for (auto i = begin; i != end; ++i) {
-		  data[static_cast<uint32_t>(*i)].second++;
+		  data[static_cast<uint32_t>(*i)]++;
 		  //cerr << static_cast<size_t>(*i) << endl;
 	  }
   };
 
   // получить количество элементов, равных данному
   size_t Get(TAirport airport) const {
-	 return data[static_cast<uint32_t>(airport)].second;
+	 return data[static_cast<uint32_t>(airport)];
   };
 
   // добавить данный элемент
   void Insert(TAirport airport) {
-	  data[static_cast<uint32_t>(airport)].second++;
+	  data[static_cast<uint32_t>(airport)]++;
   };
 
   // удалить одно вхождение данного элемента
   void EraseOne(TAirport airport){
-	  data[static_cast<uint32_t>(airport)].second--;
+	  data[static_cast<uint32_t>(airport)]--;
   };
 
   // удалить все вхождения данного элемента
   void EraseAll(TAirport airport){
-	  data[static_cast<uint32_t>(airport)].second = 0;
+	  data[static_cast<uint32_t>(airport)] = 0;
   };
 
   using Item = pair<TAirport, size_t>;
@@ -58,17 +59,22 @@ public:
   // получив набор объектов типа Item - пар (аэропорт, количество),
   // упорядоченных по аэропорту
   Items GetItems() const {
-	 return data;
+	  Items data_output;
+	  for (uint32_t i = 0; i <static_cast<uint32_t>(TAirport::Last_); ++i ) {
+		  data_output[i] = make_pair(static_cast<TAirport>(i), data[i]);
+	 	  }
+	 return data_output;
   };
 
   void PrintData (){
 	 for (auto a : data) {
-		 cerr << static_cast<size_t>(a.first) << ":" << a.second << endl;
+	cerr << a << endl;
 	 }
   };
 
 private:
-  array<pair<TAirport, size_t>, static_cast<uint32_t>(TAirport::Last_)>  data;
+//  array<pair<TAirport, size_t>, static_cast<uint32_t>(TAirport::Last_)>  data;
+  array<size_t, static_cast<uint32_t>(TAirport::Last_)>  data;
 };
 
 void TestMoscow() {
@@ -87,7 +93,7 @@ void TestMoscow() {
       MoscowAirport::SVO,
   };
   AirportCounter<MoscowAirport> airport_counter(begin(airports), end(airports));
-  //airport_counter.PrintData();
+
   ASSERT_EQUAL(airport_counter.Get(MoscowAirport::VKO), 1);
   ASSERT_EQUAL(airport_counter.Get(MoscowAirport::SVO), 2);
   ASSERT_EQUAL(airport_counter.Get(MoscowAirport::DME), 0);
@@ -99,7 +105,12 @@ void TestMoscow() {
     items.push_back(item);
   }
   ASSERT_EQUAL(items.size(), 4);
-
+//  airport_counter.PrintData();
+  //
+//  for (const auto& item : airport_counter.GetItems()) {
+//     cout << item.second << endl;
+//   }
+  //
 #define ASSERT_EQUAL_ITEM(idx, expected_enum, expected_count) \
   do { \
     ASSERT_EQUAL(static_cast<size_t>(items[idx].first), static_cast<size_t>(MoscowAirport::expected_enum)); \
