@@ -1,256 +1,168 @@
+#include <string>
 #include "test_runner.h"
-#include "profile.h"
-
-#include <algorithm>
-#include <array>
-#include <iostream>
-#include <random>
-#include <vector>
-#include <map>
-
+#include <list>
 using namespace std;
 
-// TAirport should be enum with sequential items and last item TAirport::Last_
-template <typename TAirport>
-class AirportCounter {
-public:
-  // конструктор по умолчанию: список элементов пока пуст
-  AirportCounter()=default;
+class Editor {
+ public:
 
-  // конструктор от диапазона элементов типа TAirport
-  template <typename TIterator>
-  AirportCounter(TIterator begin, TIterator end)
-  {
-	  //cerr << "конструктор" << endl;
-//	  for (uint32_t i = 0; i <static_cast<uint32_t>(TAirport::Last_); ++i ) {
-//	 		  data[i] = make_pair(static_cast<TAirport>(i), 0);
-//	 	  }
-	  data.fill(0);
-	  for (auto i = begin; i != end; ++i) {
-		  data[static_cast<uint32_t>(*i)]++;
-		  //cerr << static_cast<size_t>(*i) << endl;
+  Editor(): cursor(0) {data.reserve(1000000); buffer_cut.reserve(1000000);};
+  void Left() {if (cursor > 0) cursor--;};
+  void Right(){if (cursor < data.length()) cursor++;};
+  void Insert(char token) {data.insert(Ref(),token); cursor++;};
+	void Cut(size_t tokens = 1) {
+		CutAndCopy(tokens, true);
+	}	;
+	void Copy(size_t tokens = 1) {
+		CutAndCopy(tokens, false);
+	}	;
+  void Paste() {
+	  if (buffer_cut != "") {
+	  data.insert(Ref(), buffer_cut.begin(), buffer_cut.end());
+	  cursor += buffer_cut.length();
 	  }
   };
+  string GetTextFromList() const {
+	  list<char> list_text;
+for (char a : data)
+	list_text.push_back(a);
+string temp1;
+temp1.reserve(list_text.size());
+for (char a : list_text)
+	temp1.push_back(a);
 
-  // получить количество элементов, равных данному
-  size_t Get(TAirport airport) const {
-	 return data[static_cast<uint32_t>(airport)];
   };
-
-  // добавить данный элемент
-  void Insert(TAirport airport) {
-	  data[static_cast<uint32_t>(airport)]++;
-  };
-
-  // удалить одно вхождение данного элемента
-  void EraseOne(TAirport airport){
-	  data[static_cast<uint32_t>(airport)]--;
-  };
-
-  // удалить все вхождения данного элемента
-  void EraseAll(TAirport airport){
-	  data[static_cast<uint32_t>(airport)] = 0;
-  };
-
-  using Item = pair<TAirport, size_t>;
-  using Items = array<Item, static_cast<uint32_t>(TAirport::Last_)>;
-
-  // получить некоторый объект, по которому можно проитерироваться,
-  // получив набор объектов типа Item - пар (аэропорт, количество),
-  // упорядоченных по аэропорту
-  Items GetItems() const {
-	  Items data_output;
-	  for (uint32_t i = 0; i <static_cast<uint32_t>(TAirport::Last_); ++i ) {
-		  data_output[i] = make_pair(static_cast<TAirport>(i), data[i]);
-	 	  }
-	 return data_output;
-  };
-
-  void PrintData (){
-	 for (auto a : data) {
-	cerr << a << endl;
-	 }
-  };
-
-private:
-//  array<pair<TAirport, size_t>, static_cast<uint32_t>(TAirport::Last_)>  data;
-  array<size_t, static_cast<uint32_t>(TAirport::Last_)>  data;
+  string GetText() const {return data;};
+  size_t Cursor() const {return cursor;}
+  string GetBuffer() const {return buffer_cut;};
+ private:
+  string::iterator Ref() {return begin(data)+cursor;};
+  void CutAndCopy(size_t tokens, bool flag) {
+		if (tokens != 0) {
+			size_t cut_lenght;
+			if (tokens > data.length() - cursor)
+				cut_lenght = data.length() - cursor;
+			else
+				cut_lenght = tokens;
+			buffer_cut = data.substr(cursor, cut_lenght);
+			if (flag) data.erase(Ref(),Ref() + cut_lenght);
+		} else
+			buffer_cut = "";
+  }
+  string data;
+  string_view buffer;
+  string buffer_cut = "";
+  size_t cursor;
 };
 
-void TestMoscow() {
-  enum class MoscowAirport {
-    VKO,
-    SVO,
-    DME,
-    ZIA,
-    Last_
-  };
-
-  const vector<MoscowAirport> airports = {
-      MoscowAirport::SVO,
-      MoscowAirport::VKO,
-      MoscowAirport::ZIA,
-      MoscowAirport::SVO,
-  };
-  AirportCounter<MoscowAirport> airport_counter(begin(airports), end(airports));
-
-  ASSERT_EQUAL(airport_counter.Get(MoscowAirport::VKO), 1);
-  ASSERT_EQUAL(airport_counter.Get(MoscowAirport::SVO), 2);
-  ASSERT_EQUAL(airport_counter.Get(MoscowAirport::DME), 0);
-  ASSERT_EQUAL(airport_counter.Get(MoscowAirport::ZIA), 1);
-
-  using Item = AirportCounter<MoscowAirport>::Item;
-  vector<Item> items;
-  for (const auto& item : airport_counter.GetItems()) {
-    items.push_back(item);
+void TypeText(Editor& editor, const string& text) {
+  for(char c : text) {
+    editor.Insert(c);
   }
-  ASSERT_EQUAL(items.size(), 4);
-//  airport_counter.PrintData();
-  //
-//  for (const auto& item : airport_counter.GetItems()) {
-//     cout << item.second << endl;
-//   }
-  //
-#define ASSERT_EQUAL_ITEM(idx, expected_enum, expected_count) \
-  do { \
-    ASSERT_EQUAL(static_cast<size_t>(items[idx].first), static_cast<size_t>(MoscowAirport::expected_enum)); \
-    ASSERT_EQUAL(items[idx].second, expected_count); \
-  } while (false)
+}
 
-  ASSERT_EQUAL_ITEM(0, VKO, 1);
-  ASSERT_EQUAL_ITEM(1, SVO, 2);
-  ASSERT_EQUAL_ITEM(2, DME, 0);
-  ASSERT_EQUAL_ITEM(3, ZIA, 1);
-
-  airport_counter.Insert(MoscowAirport::VKO);
-  ASSERT_EQUAL(airport_counter.Get(MoscowAirport::VKO), 2);
-
-  airport_counter.EraseOne(MoscowAirport::SVO);
-  ASSERT_EQUAL(airport_counter.Get(MoscowAirport::SVO), 1);
-
-  airport_counter.EraseAll(MoscowAirport::VKO);
-  ASSERT_EQUAL(airport_counter.Get(MoscowAirport::VKO), 0);
+void Mytest(){
+	Editor editor;
+	TypeText(editor, "ab");
+	ASSERT_EQUAL(editor.GetText(), "ab");
+	ASSERT_EQUAL(editor.Cursor(), 2);
+	editor.Left();
+	editor.Left();
+	editor.Cut(1);
+	ASSERT_EQUAL(editor.GetText(), "b");
 
 }
 
-enum class SmallCountryAirports {
-  Airport_1,
-  Airport_2,
-  Airport_3,
-  Airport_4,
-  Airport_5,
-  Airport_6,
-  Airport_7,
-  Airport_8,
-  Airport_9,
-  Airport_10,
-  Airport_11,
-  Airport_12,
-  Airport_13,
-  Airport_14,
-  Airport_15,
-  Last_
-};
+void TestEditing() {
+  {
+    Editor editor;
 
-void TestManyConstructions() {
-  default_random_engine rnd(20180623);
-  uniform_int_distribution<size_t> gen_airport(
-    0, static_cast<size_t>(SmallCountryAirports::Last_) - 1
-  );
+    const size_t text_len = 12;
+    const size_t first_part_len = 7;
+    TypeText(editor, "hello, world");
 
-  array<SmallCountryAirports, 2> airports;
-  for (auto& x : airports) {
-    x = static_cast<SmallCountryAirports>(gen_airport(rnd));
-  }
-
-  uint64_t total = 0;
-  for (int step = 0; step < 100'000'000; ++step) {
-    AirportCounter<SmallCountryAirports> counter(begin(airports), end(airports));
-    total += counter.Get(SmallCountryAirports::Airport_1);
-  }
-  // Assert to use variable total so that compiler doesn't optimize it out
-  ASSERT(total < 1000);
-}
-
-enum class SmallTownAirports {
-  Airport_1,
-  Airport_2,
-  Last_
-};
-
-void TestManyGetItems() {
-  default_random_engine rnd(20180701);
-  uniform_int_distribution<size_t> gen_airport(
-    0, static_cast<size_t>(SmallTownAirports::Last_) - 1
-  );
-
-  array<SmallTownAirports, 2> airports;
-  for (auto& x : airports) {
-    x = static_cast<SmallTownAirports>(gen_airport(rnd));
-  }
-
-  uint64_t total = 0;
-  for (int step = 0; step < 100'000'000; ++step) {
-    AirportCounter<SmallTownAirports> counter(begin(airports), end(airports));
-    total += counter.Get(SmallTownAirports::Airport_1);
-    for (const auto [airport, count] : counter.GetItems()) {
-      total += count;
+    for(size_t i = 0; i < text_len; ++i) {
+      editor.Left();
     }
+    editor.Cut(first_part_len);
+    for(size_t i = 0; i < text_len - first_part_len; ++i) {
+      editor.Right();
+    }
+    TypeText(editor, ", ");
+    editor.Paste();
+
+    editor.Left();
+    editor.Left();
+    editor.Cut(3);
+   // cout << "Буфер :  " << editor.GetBuffer() << " Курсор : "<< editor.Cursor() << " Текст : "<< editor.GetText() << endl;
+   ASSERT_EQUAL(editor.GetText(), "world, hello");
   }
-  // Assert to use variable total so that compiler doesn't optimize it out
-  ASSERT(total > 0);
+  {
+    Editor editor;
+    TypeText(editor, "misprnit");
+    editor.Left();
+    editor.Left();
+    editor.Left();
+    editor.Cut(1);
+    editor.Right();
+    editor.Paste();
+    ASSERT_EQUAL(editor.GetText(), "misprint");
+  }
 }
 
-void TestMostPopularAirport() {
-  default_random_engine rnd(20180624);
-  uniform_int_distribution<size_t> gen_airport(
-    0, static_cast<size_t>(SmallCountryAirports::Last_) - 1
-  );
+void TestReverse() {
+  Editor editor;
 
-  array<pair<SmallCountryAirports, SmallCountryAirports>, 1000> dayly_flight_report;
-  for (auto& x : dayly_flight_report) {
-    x = {
-      static_cast<SmallCountryAirports>(gen_airport(rnd)),
-      static_cast<SmallCountryAirports>(gen_airport(rnd))
-    };
+  const string text = "esreveR";
+  for(char c : text) {
+    editor.Insert(c);
+    editor.Left();
   }
 
-  const int days_to_explore = 365 * 500;
+  ASSERT_EQUAL(editor.GetText(), "Reverse");
+}
 
-  vector<SmallCountryAirports> most_popular(days_to_explore);
+void TestNoText() {
+  Editor editor;
+  ASSERT_EQUAL(editor.GetText(), "");
 
-  for (int day = 0; day < days_to_explore; ++day) {
-    AirportCounter<SmallCountryAirports> counter;
-    for (const auto& [source, dest] : dayly_flight_report) {
-      counter.Insert(source);
-      counter.Insert(dest);
-    }
+  editor.Left();
+  editor.Left();
+  editor.Right();
+  editor.Right();
+  editor.Copy(0);
+  editor.Cut(0);
+  editor.Paste();
 
-    const auto items = counter.GetItems();
-    most_popular[day] = max_element(begin(items), end(items), [](auto lhs, auto rhs) {
-      return lhs.second < rhs.second;
-    })->first;
-  }
+  ASSERT_EQUAL(editor.GetText(), "");
+}
 
-  ASSERT(all_of(begin(most_popular), end(most_popular), [&](SmallCountryAirports a) {
-    return a == most_popular.front();
-  }));
+void TestEmptyBuffer() {
+  Editor editor;
+
+  editor.Paste();
+  TypeText(editor, "example");
+
+  editor.Left();
+  editor.Left();
+  editor.Paste();
+  editor.Right();
+  editor.Paste();
+  editor.Copy(0);
+  editor.Paste();
+  editor.Left();
+  editor.Cut(0);
+  editor.Paste();
+
+  ASSERT_EQUAL(editor.GetText(), "example");
 }
 
 int main() {
   TestRunner tr;
-
-  // По условию, суммарное время работы всех тестов не должно превышать
-  // двух секунд. Если ваше время будет лишь чуть больше двух секунд,
-  // попробуйте отправить ваше решение в тестирующую систему. Возможно,
-  // там более мощное железо, и ваше решение будет принято.
-
-  // Кроме того, не забудьте включить оптимизации при компиляции кода.
-
-  LOG_DURATION("Total tests duration");
-  RUN_TEST(tr, TestMoscow);
-  RUN_TEST(tr, TestManyConstructions);
-  RUN_TEST(tr, TestManyGetItems);
-  RUN_TEST(tr, TestMostPopularAirport);
+  RUN_TEST(tr, TestEditing);
+  RUN_TEST(tr, TestReverse);
+  RUN_TEST(tr, TestNoText);
+  RUN_TEST(tr, TestEmptyBuffer);
+  RUN_TEST(tr, Mytest);
   return 0;
 }
