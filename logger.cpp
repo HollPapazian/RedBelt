@@ -1,168 +1,117 @@
-#include <string>
 #include "test_runner.h"
-#include <list>
+#include "profile.h"
+
+#include <cstdint>
+#include <iterator>
+#include <algorithm>
+#include <numeric>
+#include <vector>
+
 using namespace std;
 
-class Editor {
- public:
+template <typename RandomIt>
+void MakeJosephusPermutation(RandomIt first, RandomIt last, uint32_t step_size) {
+	  vector<typename RandomIt::value_type> pool;
+	  size_t size = last - first;
+	  pool.reserve(size);
+	  move(first, last, std::back_inserter(pool));
+	  size_t cur_pos = 0;
+	  //cerr << "Вектор создали" << endl;
 
-  Editor(): cursor(0) {data.reserve(1000000); buffer_cut.reserve(1000000);};
-  void Left() {if (cursor > 0) cursor--;};
-  void Right(){if (cursor < data.length()) cursor++;};
-  void Insert(char token) {data.insert(Ref(),token); cursor++;};
-	void Cut(size_t tokens = 1) {
-		CutAndCopy(tokens, true);
-	}	;
-	void Copy(size_t tokens = 1) {
-		CutAndCopy(tokens, false);
-	}	;
-  void Paste() {
-	  if (buffer_cut != "") {
-	  data.insert(Ref(), buffer_cut.begin(), buffer_cut.end());
-	  cursor += buffer_cut.length();
+	  while (!pool.empty()) {
+		//cerr << "Итерация " << i1++ << " cur_pos " << cur_pos << endl;
+	    *(first++) = move(pool[cur_pos]);
+	    pool.erase(pool.begin() + cur_pos);
+	    if (pool.empty()) break;
+	    cur_pos = (cur_pos + step_size - 1) % pool.size();
+	    //cerr << cur_pos << endl;
 	  }
-  };
-  string GetTextFromList() const {
-	  list<char> list_text;
-for (char a : data)
-	list_text.push_back(a);
-string temp1;
-temp1.reserve(list_text.size());
-for (char a : list_text)
-	temp1.push_back(a);
 
-  };
-  string GetText() const {return data;};
-  size_t Cursor() const {return cursor;}
-  string GetBuffer() const {return buffer_cut;};
- private:
-  string::iterator Ref() {return begin(data)+cursor;};
-  void CutAndCopy(size_t tokens, bool flag) {
-		if (tokens != 0) {
-			size_t cut_lenght;
-			if (tokens > data.length() - cursor)
-				cut_lenght = data.length() - cursor;
-			else
-				cut_lenght = tokens;
-			buffer_cut = data.substr(cursor, cut_lenght);
-			if (flag) data.erase(Ref(),Ref() + cut_lenght);
-		} else
-			buffer_cut = "";
+
+
+
+}
+
+vector<int> MakeTestVector() {
+  vector<int> numbers(10);
+  iota(begin(numbers), end(numbers), 0);
+  return numbers;
+}
+
+void TestIntVector() {
+  const vector<int> numbers = MakeTestVector();
+//  {
+//    vector<int> numbers_copy = numbers;
+//    MakeJosephusPermutation(begin(numbers_copy), end(numbers_copy), 1);
+//    ASSERT_EQUAL(numbers_copy, numbers);
+//  }
+  {
+    vector<int> numbers_copy = numbers;
+    MakeJosephusPermutation(begin(numbers_copy), end(numbers_copy), 3);
+    ASSERT_EQUAL(numbers_copy, vector<int>({0, 3, 6, 9, 4, 8, 5, 2, 7, 1}));
   }
-  string data;
-  string_view buffer;
-  string buffer_cut = "";
-  size_t cursor;
+}
+
+// Это специальный тип, который поможет вам убедиться, что ваша реализация
+// функции MakeJosephusPermutation не выполняет копирование объектов.
+// Сейчас вы, возможно, не понимаете как он устроен, однако мы расскажем,
+// почему он устроен именно так, далее в блоке про move-семантику —
+// в видео «Некопируемые типы»
+
+struct NoncopyableInt {
+  int value;
+
+  NoncopyableInt(const NoncopyableInt&) = delete;
+  NoncopyableInt& operator=(const NoncopyableInt&) = delete;
+
+  NoncopyableInt(NoncopyableInt&&) = default;
+  NoncopyableInt& operator=(NoncopyableInt&&) = default;
 };
 
-void TypeText(Editor& editor, const string& text) {
-  for(char c : text) {
-    editor.Insert(c);
-  }
+bool operator == (const NoncopyableInt& lhs, const NoncopyableInt& rhs) {
+  return lhs.value == rhs.value;
 }
 
-void Mytest(){
-	Editor editor;
-	TypeText(editor, "ab");
-	ASSERT_EQUAL(editor.GetText(), "ab");
-	ASSERT_EQUAL(editor.Cursor(), 2);
-	editor.Left();
-	editor.Left();
-	editor.Cut(1);
-	ASSERT_EQUAL(editor.GetText(), "b");
-
+ostream& operator << (ostream& os, const NoncopyableInt& v) {
+  return os << v.value;
 }
 
-void TestEditing() {
-  {
-    Editor editor;
+void TestAvoidsCopying() {
+  vector<NoncopyableInt> numbers;
+  numbers.push_back({1});
+  numbers.push_back({2});
+  numbers.push_back({3});
+  numbers.push_back({4});
+  numbers.push_back({5});
 
-    const size_t text_len = 12;
-    const size_t first_part_len = 7;
-    TypeText(editor, "hello, world");
+  MakeJosephusPermutation(begin(numbers), end(numbers), 2);
 
-    for(size_t i = 0; i < text_len; ++i) {
-      editor.Left();
-    }
-    editor.Cut(first_part_len);
-    for(size_t i = 0; i < text_len - first_part_len; ++i) {
-      editor.Right();
-    }
-    TypeText(editor, ", ");
-    editor.Paste();
+  vector<NoncopyableInt> expected;
+  expected.push_back({1});
+  expected.push_back({3});
+  expected.push_back({5});
+  expected.push_back({4});
+  expected.push_back({2});
 
-    editor.Left();
-    editor.Left();
-    editor.Cut(3);
-   // cout << "Буфер :  " << editor.GetBuffer() << " Курсор : "<< editor.Cursor() << " Текст : "<< editor.GetText() << endl;
-   ASSERT_EQUAL(editor.GetText(), "world, hello");
-  }
-  {
-    Editor editor;
-    TypeText(editor, "misprnit");
-    editor.Left();
-    editor.Left();
-    editor.Left();
-    editor.Cut(1);
-    editor.Right();
-    editor.Paste();
-    ASSERT_EQUAL(editor.GetText(), "misprint");
-  }
+  ASSERT_EQUAL(numbers, expected);
 }
 
-void TestReverse() {
-  Editor editor;
+void SpeedTest() {
 
-  const string text = "esreveR";
-  for(char c : text) {
-    editor.Insert(c);
-    editor.Left();
-  }
+	vector<int> numbers(100000);
+	iota(numbers.begin(), numbers.end(), 0);
+	{
+		LOG_DURATION("Speed")
+		MakeJosephusPermutation(begin(numbers), end(numbers), 2);
+	}
 
-  ASSERT_EQUAL(editor.GetText(), "Reverse");
-}
-
-void TestNoText() {
-  Editor editor;
-  ASSERT_EQUAL(editor.GetText(), "");
-
-  editor.Left();
-  editor.Left();
-  editor.Right();
-  editor.Right();
-  editor.Copy(0);
-  editor.Cut(0);
-  editor.Paste();
-
-  ASSERT_EQUAL(editor.GetText(), "");
-}
-
-void TestEmptyBuffer() {
-  Editor editor;
-
-  editor.Paste();
-  TypeText(editor, "example");
-
-  editor.Left();
-  editor.Left();
-  editor.Paste();
-  editor.Right();
-  editor.Paste();
-  editor.Copy(0);
-  editor.Paste();
-  editor.Left();
-  editor.Cut(0);
-  editor.Paste();
-
-  ASSERT_EQUAL(editor.GetText(), "example");
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestEditing);
-  RUN_TEST(tr, TestReverse);
-  RUN_TEST(tr, TestNoText);
-  RUN_TEST(tr, TestEmptyBuffer);
-  RUN_TEST(tr, Mytest);
+  RUN_TEST(tr, TestIntVector);
+  RUN_TEST(tr, TestAvoidsCopying);
+  SpeedTest();
+
   return 0;
 }
