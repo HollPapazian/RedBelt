@@ -12,24 +12,29 @@ using namespace std;
 template <typename RandomIt>
 void MakeJosephusPermutation(RandomIt first, RandomIt last, uint32_t step_size) {
 	  vector<typename RandomIt::value_type> pool;
-	  size_t size = last - first;
+	  int size = last - first - 1;
+	  const size_t size_const = size+1;
 	  pool.reserve(size);
 	  move(first, last, std::back_inserter(pool));
+	  vector<bool> flags(size, true);
+	  flags[0] = false;
 	  size_t cur_pos = 0;
-	  //cerr << "Вектор создали" << endl;
+	  size_t step_counter = 0;
+	  *(first++) = move(pool[cur_pos]);
 
-	  while (!pool.empty()) {
-		//cerr << "Итерация " << i1++ << " cur_pos " << cur_pos << endl;
-	    *(first++) = move(pool[cur_pos]);
-	    pool.erase(pool.begin() + cur_pos);
-	    if (pool.empty()) break;
-	    cur_pos = (cur_pos + step_size - 1) % pool.size();
-	    //cerr << cur_pos << endl;
+	  while (size>0) {
+		  if (flags[cur_pos] == true)
+			  step_counter++;
+		  if (step_counter == step_size) {
+			  step_counter = 0;
+			  *(first++) = move(pool[cur_pos]);
+			  flags[cur_pos] = false;
+			  --size;
+		  }
+		  ++cur_pos;
+		  if (cur_pos == size_const) {
+		  			  cur_pos = 0; }
 	  }
-
-
-
-
 }
 
 vector<int> MakeTestVector() {
@@ -40,11 +45,11 @@ vector<int> MakeTestVector() {
 
 void TestIntVector() {
   const vector<int> numbers = MakeTestVector();
-//  {
-//    vector<int> numbers_copy = numbers;
-//    MakeJosephusPermutation(begin(numbers_copy), end(numbers_copy), 1);
-//    ASSERT_EQUAL(numbers_copy, numbers);
-//  }
+  {
+    vector<int> numbers_copy = numbers;
+    MakeJosephusPermutation(begin(numbers_copy), end(numbers_copy), 1);
+    ASSERT_EQUAL(numbers_copy, numbers);
+  }
   {
     vector<int> numbers_copy = numbers;
     MakeJosephusPermutation(begin(numbers_copy), end(numbers_copy), 3);
@@ -112,6 +117,7 @@ int main() {
   RUN_TEST(tr, TestIntVector);
   RUN_TEST(tr, TestAvoidsCopying);
   SpeedTest();
+
 
   return 0;
 }
