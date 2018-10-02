@@ -1,7 +1,11 @@
+#pragma once
+
 #include <vector>
 #include <set>
 #include <map>
 #include <sstream>
+
+using namespace std;
 
 template <typename Collection>
 string Join(const Collection& c, char d) {
