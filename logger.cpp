@@ -25,22 +25,18 @@ template <typename Token>
 vector<Sentence<Token>> SplitIntoSentences(vector<Token> tokens) {
 
 	vector<Sentence<Token>> result;
-	bool last_flag = false;
+	//bool last_flag = false;
 	auto begin = tokens.begin();
 	auto last = tokens.begin();
 	for (auto& a : tokens) {
-	++last;
-	//cout << a.IsEndSentencePunctuation() << endl;
-	if (last_flag == true && a.IsEndSentencePunctuation()) {
-		//cout << last_flag << " | " << a.IsEndSentencePunctuation() << endl;
-		MoveOut(begin, last, result);
-
-begin = last;
+		++last;
+		if (last == tokens.end()) {
+			MoveOut(begin, last, result);
+				} else if (a.IsEndSentencePunctuation() && last->IsEndSentencePunctuation() == false) {
+			MoveOut(begin, last, result);
+			begin = last;
+		}
 	}
-	last_flag = a.IsEndSentencePunctuation();
-	}
-
-	MoveOut(begin, last, result);
 
 return result;
 
