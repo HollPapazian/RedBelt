@@ -1,78 +1,138 @@
 #include "test_runner.h"
 
-#include <algorithm>
-#include <string>
 #include <vector>
-#include <set>
-#include <map>
 
 using namespace std;
 
-// Объявляем Group<String> для произвольного типа String
-// синонимом vector<String>.
+// Объявляем Sentence<Token> для произвольного типа Token
+// синонимом vector<Token>.
 // Благодаря этому в качестве возвращаемого значения
 // функции можно указать не малопонятный вектор векторов,
-// а вектор групп — vector<Group<String>>.
-template <typename String>
-using Group = vector<String>;
+// а вектор предложений — vector<Sentence<Token>>.
+template <typename Token>
+using Sentence = vector<Token>;
 
-// Ещё один шаблонный синоним типа
-// позволяет вместо громоздкого typename String::value_type
-// использовать Char<String>
-template <typename String>
-using Char = typename String::value_type;
+template <typename Token>
+void MoveOut (typename vector<Token>::iterator begin, typename vector<Token>::iterator last, vector<Sentence<Token>>& result) {
+	Sentence<Token> temp;
+	move(begin, last, back_inserter(temp));
+	result.push_back(move(temp));
+}
 
-template <typename String>
-vector<Group<String>> GroupHeavyStrings(vector<String> strings) {
-	map<set<Char<String>>, vector<String>> data;
-	for (auto& a : strings) {
-		set<Char<String>> temp;
-		for (auto& i : a)
-		{
-			temp.insert(i);
-		}
-		data[move(temp)].push_back(move(a));
+
+// Класс Token имеет метод bool IsEndSentencePunctuation() const
+template <typename Token>
+vector<Sentence<Token>> SplitIntoSentences(vector<Token> tokens) {
+
+	vector<Sentence<Token>> result;
+	bool last_flag = false;
+	auto begin = tokens.begin();
+	auto last = tokens.begin();
+	for (auto& a : tokens) {
+	++last;
+	//cout << a.IsEndSentencePunctuation() << endl;
+	if (last_flag == true && a.IsEndSentencePunctuation()) {
+		//cout << last_flag << " | " << a.IsEndSentencePunctuation() << endl;
+		MoveOut(begin, last, result);
+
+begin = last;
 	}
-	vector<Group<String>> result;
-	for (auto& a : data)
-		result.push_back(move(a.second));
-	return result;
+	last_flag = a.IsEndSentencePunctuation();
+	}
+
+	MoveOut(begin, last, result);
+
+return result;
+
 }
 
 
-void TestGroupingABC() {
-  vector<string> strings = {"caab", "abc", "cccc", "bacc", "c"};
-  auto groups = GroupHeavyStrings(strings);
-  ASSERT_EQUAL(groups.size(), 2);
-  sort(begin(groups), end(groups));  // Порядок групп не имеет значения
-  ASSERT_EQUAL(groups[0], vector<string>({"caab", "abc", "bacc"}));
-  ASSERT_EQUAL(groups[1], vector<string>({"cccc", "c"}));
+struct TestToken {
+  string data;
+  bool is_end_sentence_punctuation = false;
+
+  bool IsEndSentencePunctuation() const {
+    return is_end_sentence_punctuation;
+  }
+  bool operator==(const TestToken& other) const {
+    return data == other.data && is_end_sentence_punctuation == other.is_end_sentence_punctuation;
+  }
+};
+
+ostream& operator<<(ostream& stream, const TestToken& token) {
+  return stream << token.data;
 }
 
-void TestGroupingReal() {
-  vector<string> strings = {"law", "port", "top", "laptop", "pot", "paloalto", "wall", "awl"};
-  auto groups = GroupHeavyStrings(strings);
-  ASSERT_EQUAL(groups.size(), 4);
-  sort(begin(groups), end(groups));  // Порядок групп не имеет значения
-  ASSERT_EQUAL(groups[0], vector<string>({"laptop", "paloalto"}));
-  ASSERT_EQUAL(groups[1], vector<string>({"law", "wall", "awl"}));
-  ASSERT_EQUAL(groups[2], vector<string>({"port"}));
-  ASSERT_EQUAL(groups[3], vector<string>({"top", "pot"}));
+// Тест содержит копирования объектов класса TestToken.
+// Для проверки отсутствия копирований в функции SplitIntoSentences
+// необходимо написать отдельный тест.
+void TestSplitting() {
+  ASSERT_EQUAL(
+    SplitIntoSentences(vector<TestToken>({{"Split"}, {"into"}, {"sentences"}, {"!"}})),
+    vector<Sentence<TestToken>>({
+        {{"Split"}, {"into"}, {"sentences"}, {"!"}}
+    })
+  );
+
+  ASSERT_EQUAL(
+    SplitIntoSentences(vector<TestToken>({{"Split"}, {"into"}, {"sentences"}, {"!", true}})),
+    vector<Sentence<TestToken>>({
+        {{"Split"}, {"into"}, {"sentences"}, {"!", true}}
+    })
+  );
+
+  ASSERT_EQUAL(
+    SplitIntoSentences(vector<TestToken>({{"Split"}, {"into"}, {"sentences"}, {"!", true}, {"!", true}, {"Without"}, {"copies"}, {".", true}})),
+    vector<Sentence<TestToken>>({
+        {{"Split"}, {"into"}, {"sentences"}, {"!", true}, {"!", true}},
+        {{"Without"}, {"copies"}, {".", true}},
+    })
+  );
 }
-void MyTest() {
 
-  vector<string> strings = {};
-  auto groups = GroupHeavyStrings(strings);
+void Mytest(){
+	ASSERT_EQUAL(
+	    SplitIntoSentences(vector<TestToken>({{}})),
+	    vector<Sentence<TestToken>>({
+	        {{}}
+	    })
+	  );
 
-  sort(begin(groups), end(groups));  // Порядок групп не имеет значения
-  ASSERT(groups.empty());
+	  ASSERT_EQUAL(
+	    SplitIntoSentences(vector<TestToken>({{"Split", true}, {"into", true}, {"sentences"}, {"!", true}})),
+	    vector<Sentence<TestToken>>({
+	        {{"Split", true}, {"into", true}},
+			{{"sentences"}, {"!", true}}
+	    })
+	  );
+	  ASSERT_EQUAL(
+	    SplitIntoSentences(vector<TestToken>({{"Split", true}, {"into", true}, {"sentences"}, {"!"}})),
+	    vector<Sentence<TestToken>>({
+	        {{"Split", true}, {"into", true}},
+			{{"sentences"}, {"!"}}
+	    })
+	  );
 
+	  ASSERT_EQUAL(
+	    SplitIntoSentences(vector<TestToken>({{"!", true}})),
+	    vector<Sentence<TestToken>>({
+	        {{"!", true}}
+	    })
+	  );
+
+	  ASSERT_EQUAL(
+	    SplitIntoSentences(vector<TestToken>({{"Split", true}, {"!"}})),
+	    vector<Sentence<TestToken>>({
+	        {{"Split", true}},
+			{{"!"}}
+	    })
+	  );
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestGroupingABC);
-  RUN_TEST(tr, TestGroupingReal);
-  RUN_TEST(tr, MyTest);
+  RUN_TEST(tr, TestSplitting);
+  RUN_TEST(tr, Mytest);
+
   return 0;
 }
