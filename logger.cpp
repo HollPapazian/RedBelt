@@ -1,6 +1,7 @@
 #include "test_runner.h"
 
 #include <vector>
+#include <iterator>
 
 using namespace std;
 
@@ -11,13 +12,6 @@ using namespace std;
 // а вектор предложений Ч vector<Sentence<Token>>.
 template <typename Token>
 using Sentence = vector<Token>;
-
-template <typename Token>
-void MoveOut (typename vector<Token>::iterator begin, typename vector<Token>::iterator last, vector<Sentence<Token>>& result) {
-	Sentence<Token> temp;
-	move(begin, last, back_inserter(temp));
-	result.push_back(move(temp));
-}
 
 
 //  ласс Token имеет метод bool IsEndSentencePunctuation() const
@@ -31,9 +25,9 @@ vector<Sentence<Token>> SplitIntoSentences(vector<Token> tokens) {
 	for (auto& a : tokens) {
 		++last;
 		if (last == tokens.end()) {
-			MoveOut(begin, last, result);
+			result.push_back(Sentence<Token>{make_move_iterator(begin),make_move_iterator(last)});
 				} else if (a.IsEndSentencePunctuation() && last->IsEndSentencePunctuation() == false) {
-			MoveOut(begin, last, result);
+					result.push_back(Sentence<Token>{make_move_iterator(begin),make_move_iterator(last)});
 			begin = last;
 		}
 	}
