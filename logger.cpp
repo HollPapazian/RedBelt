@@ -1,128 +1,35 @@
 #include "test_runner.h"
-
+#include <algorithm>
+#include <memory>
 #include <vector>
-#include <iterator>
 
 using namespace std;
 
-// Объявляем Sentence<Token> для произвольного типа Token
-// синонимом vector<Token>.
-// Благодаря этому в качестве возвращаемого значения
-// функции можно указать не малопонятный вектор векторов,
-// а вектор предложений — vector<Sentence<Token>>.
-template <typename Token>
-using Sentence = vector<Token>;
-
-
-// Класс Token имеет метод bool IsEndSentencePunctuation() const
-template <typename Token>
-vector<Sentence<Token>> SplitIntoSentences(vector<Token> tokens) {
-
-	vector<Sentence<Token>> result;
-	//bool last_flag = false;
-	auto begin = tokens.begin();
-	auto last = tokens.begin();
-	for (auto& a : tokens) {
-		++last;
-		if (last == tokens.end()) {
-			result.push_back(Sentence<Token>{make_move_iterator(begin),make_move_iterator(last)});
-				} else if (a.IsEndSentencePunctuation() && last->IsEndSentencePunctuation() == false) {
-					result.push_back(Sentence<Token>{make_move_iterator(begin),make_move_iterator(last)});
-			begin = last;
-		}
-	}
-
-return result;
-
+template <typename RandomIt>
+void MergeSort(RandomIt range_begin, RandomIt range_end) {
+size_t range_size = range_end - range_begin;
+if ((range_end - range_begin) < 2)
+	return;
+vector<typename RandomIt::value_type> temp;
+move(range_begin, range_end, back_inserter(temp));
+RandomIt range_13 = temp.begin() + range_size / 3;
+RandomIt range_23 = temp.begin() + (range_size / 3)*2;
+MergeSort(temp.begin(), range_13);
+MergeSort(range_13, range_23);
+MergeSort(range_23, temp.end());
+vector<typename RandomIt::value_type> temp2;
+merge(make_move_iterator(temp.begin()), make_move_iterator(range_13), make_move_iterator(range_13), make_move_iterator(range_23), back_inserter(temp2));
+merge(make_move_iterator(temp2.begin()), make_move_iterator(temp2.end()), make_move_iterator(range_23), make_move_iterator(temp.end()), range_begin);
 }
 
-
-struct TestToken {
-  string data;
-  bool is_end_sentence_punctuation = false;
-
-  bool IsEndSentencePunctuation() const {
-    return is_end_sentence_punctuation;
-  }
-  bool operator==(const TestToken& other) const {
-    return data == other.data && is_end_sentence_punctuation == other.is_end_sentence_punctuation;
-  }
-};
-
-ostream& operator<<(ostream& stream, const TestToken& token) {
-  return stream << token.data;
-}
-
-// Тест содержит копирования объектов класса TestToken.
-// Для проверки отсутствия копирований в функции SplitIntoSentences
-// необходимо написать отдельный тест.
-void TestSplitting() {
-  ASSERT_EQUAL(
-    SplitIntoSentences(vector<TestToken>({{"Split"}, {"into"}, {"sentences"}, {"!"}})),
-    vector<Sentence<TestToken>>({
-        {{"Split"}, {"into"}, {"sentences"}, {"!"}}
-    })
-  );
-
-  ASSERT_EQUAL(
-    SplitIntoSentences(vector<TestToken>({{"Split"}, {"into"}, {"sentences"}, {"!", true}})),
-    vector<Sentence<TestToken>>({
-        {{"Split"}, {"into"}, {"sentences"}, {"!", true}}
-    })
-  );
-
-  ASSERT_EQUAL(
-    SplitIntoSentences(vector<TestToken>({{"Split"}, {"into"}, {"sentences"}, {"!", true}, {"!", true}, {"Without"}, {"copies"}, {".", true}})),
-    vector<Sentence<TestToken>>({
-        {{"Split"}, {"into"}, {"sentences"}, {"!", true}, {"!", true}},
-        {{"Without"}, {"copies"}, {".", true}},
-    })
-  );
-}
-
-void Mytest(){
-	ASSERT_EQUAL(
-	    SplitIntoSentences(vector<TestToken>({{}})),
-	    vector<Sentence<TestToken>>({
-	        {{}}
-	    })
-	  );
-
-	  ASSERT_EQUAL(
-	    SplitIntoSentences(vector<TestToken>({{"Split", true}, {"into", true}, {"sentences"}, {"!", true}})),
-	    vector<Sentence<TestToken>>({
-	        {{"Split", true}, {"into", true}},
-			{{"sentences"}, {"!", true}}
-	    })
-	  );
-	  ASSERT_EQUAL(
-	    SplitIntoSentences(vector<TestToken>({{"Split", true}, {"into", true}, {"sentences"}, {"!"}})),
-	    vector<Sentence<TestToken>>({
-	        {{"Split", true}, {"into", true}},
-			{{"sentences"}, {"!"}}
-	    })
-	  );
-
-	  ASSERT_EQUAL(
-	    SplitIntoSentences(vector<TestToken>({{"!", true}})),
-	    vector<Sentence<TestToken>>({
-	        {{"!", true}}
-	    })
-	  );
-
-	  ASSERT_EQUAL(
-	    SplitIntoSentences(vector<TestToken>({{"Split", true}, {"!"}})),
-	    vector<Sentence<TestToken>>({
-	        {{"Split", true}},
-			{{"!"}}
-	    })
-	  );
+void TestIntVector() {
+  vector<int> numbers = {6, 1, 3, 9, 1, 9, 8, 12, 1};
+  MergeSort(begin(numbers), end(numbers));
+  ASSERT(is_sorted(begin(numbers), end(numbers)));
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestSplitting);
-  RUN_TEST(tr, Mytest);
-
+  RUN_TEST(tr, TestIntVector);
   return 0;
 }
