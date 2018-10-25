@@ -1,104 +1,98 @@
 #include "test_runner.h"
-#include <vector>
+#include "profile.h"
+
+#include <map>
+#include <string>
 #include <future>
-#include <numeric>
+#include <vector>
+#include <string_view>
+
 using namespace std;
 
-template <typename Iterator>
-class IteratorRange {
-public:
-  IteratorRange(Iterator begin, Iterator end)
-    : first(begin)
-    , last(end)
-    , size_(distance(first, last))
-  {
-  }
+struct Stats {
+  map<string, int> word_frequences;
 
-  Iterator begin() const {
-    return first;
-  }
-
-  Iterator end() const {
-    return last;
-  }
-
-  size_t size() const {
-    return size_;
-  }
-
-private:
-  Iterator first, last;
-  size_t size_;
-};
-
-template <typename Iterator>
-class Paginator {
-private:
-  vector<IteratorRange<Iterator>> pages;
-
-public:
-  Paginator(Iterator begin, Iterator end, size_t page_size) {
-    for (size_t left = distance(begin, end); left > 0; ) {
-      size_t current_page_size = min(page_size, left);
-      Iterator current_page_end = next(begin, current_page_size);
-      pages.push_back({begin, current_page_end});
-
-      left -= current_page_size;
-      begin = current_page_end;
-    }
-  }
-
-  auto begin() const {
-    return pages.begin();
-  }
-
-  auto end() const {
-    return pages.end();
-  }
-
-  size_t size() const {
-    return pages.size();
+  void operator += (const Stats& other){
+	  for (auto& [key, value]: other.word_frequences){
+		  word_frequences[key] += value;
+	  }
   }
 };
 
-template <typename C>
-auto Paginate(C& c, size_t page_size) {
-  return Paginator(begin(c), end(c), page_size);
+Stats ExploreLine(const set<string>& key_words, const string& line) {
+
+	vector<string_view> result;
+	string_view str = line;
+	if (str.back() == '\n')
+		str.remove_suffix(1);
+	while (true) {
+		size_t space = str.find(' ');
+		result.push_back(str.substr(0, space));
+		if (space == str.npos)
+			break;
+		else {
+			// ищем новое начало.
+			str.remove_prefix(space+1);
+			while (str[0] == ' ')
+				str.remove_prefix(1);
+		}
+	}
+	// проверяем ключи
+	Stats result_map;
+	for (auto& a : result){
+		if (key_words.find(string(a)) != key_words.end())
+			++result_map.word_frequences[string(a)];
+	}
+	return result_map;
 }
 
-template <typename C>
-int64_t CalculateMatrixSumOne(const C& matrix) {
-int64_t result = 0;
-for (auto& a : matrix) {
-	result += accumulate(a.begin(),a.end(),0);
-}
-return result;
-}
-
-
-
-int64_t CalculateMatrixSum(const vector<vector<int>>& matrix) {
-vector<future<int64_t>>	futures;
-for (auto& page : Paginate(matrix, 2000)){
-	futures.push_back(async([=]{return CalculateMatrixSumOne(page);}));
-}
-int64_t result = 0;
-for (auto& a : futures)
-	result += a.get();
-return result;
+Stats ExploreKeyWordsSingleThread(
+  const set<string>& key_words, istream& input
+) {
+  Stats result;
+  for (string line; getline(input, line); ) {
+    result += ExploreLine(key_words, line);
+  }
+  return result;
 }
 
-void TestCalculateMatrixSum() {
-  const vector<vector<int>> matrix = {
-    {1, 2, 3, 4},
-    {5, 6, 7, 8},
-    {9, 10, 11, 12},
-    {13, 14, 15, 16}
+Stats ExploreKeyWords(const set<string>& key_words, istream& input) {
+
+	  //return ExploreKeyWordsSingleThread(key_words, input);
+
+	vector<future<Stats>> futures;
+	for (auto i = 0; i < 6; ++i) {
+		 futures.push_back(async(ExploreKeyWordsSingleThread, ref(key_words), ref(input)));
+	}
+
+	 Stats result;
+	 for (auto& a : futures) {
+		 result += a.get();
+	 }
+
+	 return result;
+}
+
+void TestBasic() {
+  const set<string> key_words = {"yangle", "rocks", "sucks", "all"};
+
+  stringstream ss;
+  ss << "this new yangle service really rocks\n";
+  ss << "It sucks when yangle isn't available\n";
+  ss << "10 reasons why yangle is the best IT company\n";
+  ss << "yangle rocks others suck\n";
+  ss << "Goondex really sucks, but yangle rocks. Use yangle\n";
+
+  const auto stats = ExploreKeyWords(key_words, ss);
+  const map<string, int> expected = {
+    {"yangle", 6},
+    {"rocks", 2},
+    {"sucks", 1}
   };
-  ASSERT_EQUAL(CalculateMatrixSum(matrix), 136);
+  ASSERT_EQUAL(stats.word_frequences, expected);
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestCalculateMatrixSum);
+  RUN_TEST(tr, TestBasic);
 }
