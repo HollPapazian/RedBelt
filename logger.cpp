@@ -6,6 +6,8 @@
 #include <future>
 #include <vector>
 #include <string_view>
+#include <functional>
+
 
 using namespace std;
 
@@ -13,15 +15,20 @@ struct Stats {
   map<string, int> word_frequences;
 
   void operator += (const Stats& other){
+	  if (!(other.word_frequences.empty())) {
 	  for (auto& [key, value]: other.word_frequences){
 		  word_frequences[key] += value;
 	  }
-  }
+  }}
 };
 
-Stats ExploreLine(const set<string>& key_words, const string& line) {
+Stats ExploreLine(const set<string>& key_words, const vector<string>& lines) {
 
 	vector<string_view> result;
+
+	for (auto& line : lines) {
+
+		//cout << line << endl;
 	string_view str = line;
 	if (str.back() == '\n')
 		str.remove_suffix(1);
@@ -37,12 +44,17 @@ Stats ExploreLine(const set<string>& key_words, const string& line) {
 				str.remove_prefix(1);
 		}
 	}
+	}
+
+
 	// проверяем ключи
 	Stats result_map;
 	for (auto& a : result){
 		if (key_words.find(string(a)) != key_words.end())
 			++result_map.word_frequences[string(a)];
 	}
+
+
 	return result_map;
 }
 
@@ -50,9 +62,11 @@ Stats ExploreKeyWordsSingleThread(
   const set<string>& key_words, istream& input
 ) {
   Stats result;
+  vector<string> lines;
   for (string line; getline(input, line); ) {
-    result += ExploreLine(key_words, line);
+	  lines.push_back(line);
   }
+  result += ExploreLine(key_words, lines);
   return result;
 }
 
@@ -60,14 +74,25 @@ Stats ExploreKeyWords(const set<string>& key_words, istream& input) {
 
 	  //return ExploreKeyWordsSingleThread(key_words, input);
 
+	vector<vector<string>> tempor(5);
+	int i = -1;
+	for (string line; getline(input, line); ) {
+		tempor[++i].push_back(line);
+		if (i == 4)
+			i = -1;
+	  }
+
+
 	vector<future<Stats>> futures;
-	for (auto i = 0; i < 6; ++i) {
-		 futures.push_back(async(ExploreKeyWordsSingleThread, ref(key_words), ref(input)));
+	for (auto a : tempor) {
+
+		 futures.push_back(async(ExploreLine, ref(key_words), a));
 	}
 
 	 Stats result;
 	 for (auto& a : futures) {
-		 result += a.get();
+	//	 cout << a.get().word_frequences << endl;
+		result += a.get();
 	 }
 
 	 return result;
